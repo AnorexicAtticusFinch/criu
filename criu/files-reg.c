@@ -1394,7 +1394,7 @@ static bool should_check_size(int flags)
 static int get_build_id(const int fd, const struct stat *fd_status,
 				unsigned char **build_id)
 {
-	int size, num_iter;
+	int size;
 	char *file_header_end;
 	Elf_ptr(Ehdr) *file_header;
 	Elf_ptr(Phdr) *program_header;
