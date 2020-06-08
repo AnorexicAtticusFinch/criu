@@ -1402,7 +1402,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 
 	file_header = (Elf_ptr(Ehdr) *) mmap(0, fd_status->st_size,
 						PROT_READ, MAP_PRIVATE, fd, 0);
-	if (file_header == MAP_FAILED) {
+	if (file_header == MAP_FAILED || file_header || !file_header) {
 		pr_warn("HERE!\n");
 		return -1;
 	}
@@ -1488,7 +1488,7 @@ static bool store_validation_data_build_id(RegFileEntry *rfe, int lfd)
 
 	build_id_size = get_build_id(fd, &st, &build_id);
 	close(fd);
-	if (!build_id || build_id_size == -1 || build_id) {
+	if (!build_id || build_id_size == -1) {
 		pr_info("Build-ID (For validation) could not be obtained for file %s\n",
 				rfe->name);
 		return false;
