@@ -1388,8 +1388,6 @@ static bool should_check_size(int flags)
 static void store_validation_data(RegFileEntry *rfe,
 					const struct fd_parms *p)
 {
-	bool result = true;
-
 	rfe->has_size = true;
 	rfe->size = p->stat.st_size;
 	return;
@@ -1751,18 +1749,13 @@ out_root:
 static bool validate_file(const struct stat *fd_status,
 					const struct reg_file_info *rfi)
 {
-	int result = 1;
-
 	if (rfi->rfe->has_size && (fd_status->st_size != rfi->rfe->size)) {
 		pr_err("File %s has bad size %"PRIu64" (expect %"PRIu64")\n",
 				rfi->path, fd_status->st_size, rfi->rfe->size);
 		return false;
 	}
 	
-	if (result) {
-		return true;
-	}
-	return false;
+	return true;
 }
 
 int open_path(struct file_desc *d,
