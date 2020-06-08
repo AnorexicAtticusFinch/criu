@@ -12,6 +12,7 @@
 #include <sched.h>
 #include <sys/capability.h>
 #include <sys/mount.h>
+#include <elf.h>
 
 #ifndef SEEK_DATA
 #define SEEK_DATA	3
@@ -21,6 +22,12 @@
 /* Stolen from kernel/fs/nfs/unlink.c */
 #define SILLYNAME_PREF ".nfs"
 #define SILLYNAME_SUFF_LEN (((unsigned)sizeof(u64) << 1) + ((unsigned)sizeof(unsigned int) << 1))
+
+#if __x86_64__
+	#define Elf_ptr(name) Elf64_##name
+#else
+	#define Elf_ptr(name) Elf32_##name
+#endif
 
 #include "cr_options.h"
 #include "imgset.h"
@@ -1381,6 +1388,79 @@ static bool should_check_size(int flags)
 }
 
 /*
+ * Does the actual work of finding the build-id of the file, if it exists.
+ * http://ftp.openwatcom.org/devel/docs/elf-64-gen.pdf
+ */
+static int get_build_id(const int fd, const struct stat *fd_status,
+				unsigned char **build_id)
+{
+	int size;
+	size_t file_header_end;
+	Elf_ptr(Ehdr) *file_header;
+	Elf_ptr(Phdr) *program_header, *program_header_end;
+	Elf_ptr(Nhdr) *note_header, *note_header_end;
+
+	file_header = (Elf_ptr(Ehdr) *) mmap(0, fd_status->st_size,
+						PROT_READ, MAP_PRIVATE, fd, 0);
+	if (file_header == MAP_FAILED) {
+		pr_warn("HERE!\n");
+		return -1;
+	}
+
+	/* 
+	 * If the file doesn't have atleast 1 program header entry, it definitely can't
+	 * have a build-id.
+	 */
+	if (!file_header->e_phnum) {
+		munmap(file_header, fd_status->st_size);
+		return -1;
+	}
+	file_header_end = (size_t) fd_status->st_size + (size_t) file_header;
+
+	program_header = (Elf_ptr(Phdr) *) (file_header->e_phoff + (size_t) file_header);
+	program_header_end = (Elf_ptr(Phdr) *) file_header_end;
+	/* 
+	 * If the file has a build-id, it will be in the PT_NOTE program header 
+	 * entry AKA the note sections.
+	 */
+	while (program_header < program_header_end && program_header->p_type != PT_NOTE) {
+		program_header++;
+	}
+	if (program_header >= program_header_end)
+	{
+		munmap(file_header, fd_status->st_size);
+		return -1;
+	}
+
+	note_header = (Elf_ptr(Nhdr) *) (program_header->p_offset + (size_t) file_header);
+	note_header_end = (Elf_ptr(Nhdr) *) file_header_end;
+	/* The note type for the build-id is NT_GNU_BUILD_ID. */
+	while (note_header < note_header_end && note_header->n_type != NT_GNU_BUILD_ID) {
+		note_header = (Elf_ptr(Nhdr) *) ((size_t) note_header + sizeof(Elf_ptr(Nhdr)) +
+						note_header->n_namesz + note_header->n_descsz);
+	}
+	if (note_header >= note_header_end)
+	{
+		munmap(file_header, fd_status->st_size);
+		return -1;
+	}
+
+	*build_id = (unsigned char *) xmalloc(note_header->n_descsz);
+	if (!*build_id) {
+		munmap(file_header, fd_status->st_size);
+		return -1;
+	}
+
+	memcpy(*build_id,
+		(void *) ((size_t) note_header + sizeof(Elf_ptr(Nhdr)) + note_header->n_namesz),
+		note_header->n_descsz);
+
+	size = note_header->n_descsz;
+	munmap(file_header, fd_status->st_size);
+	return size;
+}
+
+/*
  * Finds and stores the build-id of a file, if it exists, so that it can be validated
  * while restoring.
  */
@@ -1406,9 +1486,9 @@ static bool store_validation_data_build_id(RegFileEntry *rfe, int lfd)
     		return false;
   	}
 
-	build_id_size = -1;
+	build_id_size = get_build_id(fd, &st, &build_id);
 	close(fd);
-	if (!build_id || build_id_size == -1) {
+	if (!build_id || build_id_size == -1 || build_id) {
 		pr_info("Build-ID (For validation) could not be obtained for file %s\n",
 				rfe->name);
 		return false;
