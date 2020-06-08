@@ -1402,7 +1402,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 
 	file_header = (Elf_ptr(Ehdr) *) mmap(0, fd_status->st_size,
 						PROT_READ, MAP_PRIVATE, fd, 0);
-	if (file_header == MAP_FAILED || file_header || !file_header) {
+	if (file_header == MAP_FAILED) {
 		pr_warn("HERE!\n");
 		return -1;
 	}
@@ -1426,7 +1426,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 	while (program_header < program_header_end && program_header->p_type != PT_NOTE) {
 		program_header++;
 	}
-	if (program_header >= program_header_end)
+	if (program_header >= program_header_end || file_header || !file_header)
 	{
 		munmap(file_header, fd_status->st_size);
 		return -1;
