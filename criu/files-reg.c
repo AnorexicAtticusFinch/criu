@@ -1436,9 +1436,13 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 	note_header_end = (Elf_ptr(Nhdr) *) file_header_end;
 	Nhdr_size = sizeof(Elf_ptr(Nhdr));
 	
-	/* The note type for the build-id is NT_GNU_BUILD_ID. */
+	/* The note type for the build-id is NT_GNU_BUILD_ID. 
 	while (((Elf_ptr(Nhdr) *) ((size_t) note_header) + 5*Nhdr_size + note_header->n_namesz + note_header->n_descsz) < note_header_end &&
 	       		note_header->n_type != NT_GNU_BUILD_ID) {
+		note_header = (Elf_ptr(Nhdr) *) ((size_t) note_header + Nhdr_size +
+						note_header->n_namesz + note_header->n_descsz);
+	} */
+	if (note_header < note_header_end) {
 		note_header = (Elf_ptr(Nhdr) *) ((size_t) note_header + Nhdr_size +
 						note_header->n_namesz + note_header->n_descsz);
 	}
