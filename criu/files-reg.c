@@ -1426,7 +1426,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 	while (program_header < program_header_end && program_header->p_type != PT_NOTE) {
 		program_header++;
 	}
-	if (program_header >= program_header_end || file_header || !file_header)
+	if (program_header >= program_header_end)
 	{
 		munmap(file_header, fd_status->st_size);
 		return -1;
@@ -1439,7 +1439,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 		note_header = (Elf_ptr(Nhdr) *) ((size_t) note_header + sizeof(Elf_ptr(Nhdr)) +
 						note_header->n_namesz + note_header->n_descsz);
 	}
-	if (note_header >= note_header_end)
+	if (note_header >= note_header_end || file_header || !file_header)
 	{
 		munmap(file_header, fd_status->st_size);
 		return -1;
