@@ -1381,15 +1381,74 @@ static bool should_check_size(int flags)
 }
 
 /*
+ * Finds and stores the build-id of a file, if it exists, so that it can be validated
+ * while restoring.
+ */
+static bool store_validation_data_build_id(RegFileEntry *rfe, int lfd)
+{
+	unsigned char *build_id = NULL;
+	int build_id_size, i;
+	char buf[32];
+	int fd;
+	struct stat st;
+
+	snprintf(buf, sizeof(buf), "/proc/self/fd/%d", lfd);
+	fd = open(buf, O_RDONLY);
+	if (fd < 0) {
+		pr_info("Build-ID (For validation) could not be obtained for file %s because can't open the file\n",
+				rfe->name);
+		return false;
+	}
+	if (fstat(fd, &st) < 0) {
+		pr_info("Build-ID (For validation) could not be obtained for file %s because can't fstat the file\n",
+				rfe->name);
+		close(fd);
+    		return false;
+  	}
+
+	build_id_size = -1;
+	close(fd);
+	if (!build_id || build_id_size == -1) {
+		pr_info("Build-ID (For validation) could not be obtained for file %s\n",
+				rfe->name);
+		return false;
+	}
+
+	rfe->build_id = xmalloc(sizeof(int) * build_id_size);
+	if (!rfe->build_id) {
+		pr_info("Build-ID (For validation) could not be set for file %s\n",
+				rfe->name);
+		return false;
+	}
+
+	rfe->n_build_id = build_id_size;
+	for (i = 0; i < build_id_size; i++) {
+		rfe->build_id[i] = build_id[i];
+	}
+
+	xfree(build_id);
+	return true;
+}
+
+/*
  * This routine stores metadata about the open file (File size, build-id, CRC32C checksum)
  * so that validation can be done while restoring to make sure that the right file is
  * being restored.
  */
 static void store_validation_data(RegFileEntry *rfe,
-					const struct fd_parms *p)
+					const struct fd_parms *p, int lfd)
 {
+	bool result = true;
+
 	rfe->has_size = true;
 	rfe->size = p->stat.st_size;
+
+	result = store_validation_data_build_id(rfe, lfd);
+
+	if (!result) {
+		pr_warn("Only file size could be stored for validation for file %s\n",
+				rfe->name);
+	}
 	return;
 }
 
@@ -1461,7 +1520,7 @@ ext:
 	rfe.mode	= p->stat.st_mode;
 
 	if (S_ISREG(p->stat.st_mode) && should_check_size(rfe.flags)) {
-		store_validation_data(&rfe, p);
+		store_validation_data(&rfe, p, lfd);
 	}
 
 	fe.type = FD_TYPES__REG;
@@ -1741,21 +1800,81 @@ out_root:
 }
 
 /*
+ * Compares the file's build-id with the stored value.
+ * https://fedoraproject.org/wiki/Releases/FeatureBuildId#Unique_build_ID
+ */
+static int validate_with_build_id(const int fd, const struct stat *fd_status,
+					const struct reg_file_info *rfi)
+{
+	unsigned char *build_id;
+	int build_id_size, i;
+
+	if (!rfi->rfe->has_size) {
+		return 1;
+	}
+
+	if (!rfi->rfe->n_build_id) {
+		pr_info("Build-ID (For validation) has not been stored for file %s\n",
+				rfi->path);
+		return -1;
+	}
+
+	build_id = NULL;
+	build_id_size = -1;
+	if (!build_id || build_id_size == -1) {
+		pr_info("Build-ID (For validation) could not be obtained for file %s\n",
+				rfi->path);
+		return -1;
+	}
+
+	if (build_id_size != rfi->rfe->n_build_id)
+	{
+		pr_err("File %s has bad build-ID length %d\n", rfi->path, build_id_size);
+		xfree(build_id);
+		return 0;
+	}
+
+	for (i = 0; i < build_id_size; i++) {
+		if (build_id[i] != rfi->rfe->build_id[i]) {
+			pr_err("File %s has bad build-ID value %x at index %d (expect %x)\n",
+					rfi->path, build_id[i],
+					i, rfi->rfe->build_id[i]);
+			xfree(build_id);
+			return 0;
+		}
+	}
+
+	xfree(build_id);
+	return 1;
+}
+
+/*
  * This routine determines whether it was the same file that was open during dump
  * by checking the file's size, build-id and/or checksum with the same metadata
  * that was stored before dumping.
  * Checksum is calculated with CRC32C.
  */
-static bool validate_file(const struct stat *fd_status,
+static bool validate_file(const int fd, const struct stat *fd_status,
 					const struct reg_file_info *rfi)
 {
+	int result = 1;
+
 	if (rfi->rfe->has_size && (fd_status->st_size != rfi->rfe->size)) {
 		pr_err("File %s has bad size %"PRIu64" (expect %"PRIu64")\n",
 				rfi->path, fd_status->st_size, rfi->rfe->size);
 		return false;
 	}
-	
-	return true;
+
+	result = validate_with_build_id(fd, fd_status, rfi);
+
+	if (result == -1) {
+		pr_warn("File %s could only be validated with file size\n",
+				rfi->path);
+	}
+	if (result) {
+		return true;
+	}
+	return false;
 }
 
 int open_path(struct file_desc *d,
@@ -1852,7 +1971,7 @@ ext:
 			return -1;
 		}
 
-		if (!validate_file(&st, rfi)) {
+		if (!validate_file(tmp, &st, rfi)) {
 			return -1;
 		}
 
