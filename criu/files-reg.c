@@ -1442,7 +1442,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 		note_header = (Elf_ptr(Nhdr) *) ((size_t) note_header + Nhdr_size +
 						note_header->n_namesz + note_header->n_descsz);
 	} */
-	if (note_header < note_header_end) {
+	while (note_header < note_header_end) {
 		note_header = (Elf_ptr(Nhdr) *) ((size_t) note_header + Nhdr_size +
 						note_header->n_namesz + note_header->n_descsz);
 	}
