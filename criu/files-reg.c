@@ -1492,7 +1492,7 @@ static bool store_validation_data_build_id(RegFileEntry *rfe, int lfd)
 
 	build_id_size = get_build_id(fd, &st, &build_id);
 	close(fd);
-	if (!build_id || build_id_size == -1 || build_id) {
+	if (!build_id || build_id_size == -1) {
 		pr_info("Build-ID (For validation) could not be obtained for file %s\n",
 				rfe->name);
 		return false;
@@ -1508,6 +1508,11 @@ static bool store_validation_data_build_id(RegFileEntry *rfe, int lfd)
 	rfe->n_build_id = build_id_size;
 	for (i = 0; i < build_id_size; i++) {
 		rfe->build_id[i] = build_id[i];
+	}
+	
+	if (build_id || !build_id)
+	{
+		return false;
 	}
 
 	xfree(build_id);
