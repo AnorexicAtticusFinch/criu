@@ -1394,11 +1394,11 @@ static bool should_check_size(int flags)
 static int get_build_id(const int fd, const struct stat *fd_status,
 				unsigned char **build_id)
 {
-	int size;
-	char *file_header_end;
+	int size, num_iterations;
+	size_t file_header_end;
 	Elf_ptr(Ehdr) *file_header;
-	Elf_ptr(Phdr) *program_header;
-	Elf_ptr(Nhdr) *note_header;
+	Elf_ptr(Phdr) *program_header, *program_header_end;
+	Elf_ptr(Nhdr) *note_header, *note_header_end;
 
 	file_header = (Elf_ptr(Ehdr) *) mmap(0, fd_status->st_size,
 						PROT_READ, MAP_PRIVATE, fd, 0);
@@ -1415,31 +1415,34 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 		munmap(file_header, fd_status->st_size);
 		return -1;
 	}
-	file_header_end = fd_status->st_size + (char *) file_header;
+	file_header_end = (size_t) fd_status->st_size + (size_t) file_header;
 
 	program_header = (Elf_ptr(Phdr) *) (file_header->e_phoff + (size_t) file_header);
+	program_header_end = (Elf_ptr(Phdr) *) file_header_end;
 	/* 
 	 * If the file has a build-id, it will be in the PT_NOTE program header 
 	 * entry AKA the note sections.
 	 */
-	while ((char *) program_header < file_header_end && program_header->p_type != PT_NOTE) {
+	while (program_header < program_header_end && program_header->p_type != PT_NOTE) {
 		program_header++;
 	}
-	if ((char *) program_header >= file_header_end)
+	if (program_header >= program_header_end)
 	{
 		munmap(file_header, fd_status->st_size);
 		return -1;
 	}
 
 	note_header = (Elf_ptr(Nhdr) *) (program_header->p_offset + (size_t) file_header);
-	
+	note_header_end = (Elf_ptr(Nhdr) *) file_header_end;
+	num_iterations = 50;
 	/* The note type for the build-id is NT_GNU_BUILD_ID. */
-	while ((char *) note_header < file_header_end && note_header->n_type != NT_GNU_BUILD_ID) {
+	
+	while (num_iterations-- && note_header < note_header_end && note_header->n_type != NT_GNU_BUILD_ID) {
 		note_header = (Elf_ptr(Nhdr) *) ((size_t) note_header + sizeof(Elf_ptr(Nhdr)) +
 						note_header->n_namesz + note_header->n_descsz);
 	}
 	
-	if ((char *) note_header >= file_header_end || file_header || !file_header)
+	if (!num_iterations || note_header >= note_header_end)
 	{
 		munmap(file_header, fd_status->st_size);
 		return -1;
