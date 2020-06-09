@@ -1448,6 +1448,11 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 		munmap(file_header, fd_status->st_size);
 		return -1;
 	}
+	
+	if (!note_header->n_descsz) {
+		munmap(file_header, fd_status->st_size);
+		return -1;
+	}
 
 	*build_id = (unsigned char *) xmalloc(note_header->n_descsz);
 	if (!*build_id) {
@@ -1492,7 +1497,7 @@ static bool store_validation_data_build_id(RegFileEntry *rfe, int lfd)
 
 	build_id_size = get_build_id(fd, &st, &build_id);
 	close(fd);
-	if (!build_id || build_id_size == -1) {
+	if (!build_id || build_id_size <= 0) {
 		pr_info("Build-ID (For validation) could not be obtained for file %s\n",
 				rfe->name);
 		return false;
@@ -1508,11 +1513,6 @@ static bool store_validation_data_build_id(RegFileEntry *rfe, int lfd)
 	rfe->n_build_id = build_id_size;
 	for (i = 0; i < build_id_size; i++) {
 		rfe->build_id[i] = build_id[i];
-	}
-	
-	if (build_id || !build_id)
-	{
-		return false;
 	}
 
 	xfree(build_id);
@@ -1618,6 +1618,11 @@ ext:
 
 	rimg = img_from_set(glob_imgset, CR_FD_FILES);
 	tmp = pb_write_one(rimg, &fe, PB_FILE);
+	
+	if (rfe.build_id) {
+		xfree(rfe.build_id);
+	}
+	
 	return tmp;
 }
 
@@ -1910,7 +1915,7 @@ static int validate_with_build_id(const int fd, const struct stat *fd_status,
 
 	build_id = NULL;
 	build_id_size = -1;
-	if (!build_id || build_id_size == -1) {
+	if (!build_id || build_id_size <= 0) {
 		pr_info("Build-ID (For validation) could not be obtained for file %s\n",
 				rfi->path);
 		return -1;
