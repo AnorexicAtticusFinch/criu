@@ -1419,14 +1419,15 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 
 	program_header = (Elf_ptr(Phdr) *) (file_header->e_phoff + (size_t) file_header);
 	program_header_end = (Elf_ptr(Phdr) *) file_header_end;
+	num_iterations = 15;
 	/* 
 	 * If the file has a build-id, it will be in the PT_NOTE program header 
 	 * entry AKA the note sections.
 	 */
-	while (program_header < program_header_end && program_header->p_type != PT_NOTE) {
+	while (num_iterations-- && program_header < program_header_end && program_header->p_type != PT_NOTE) {
 		program_header++;
 	}
-	if (program_header >= program_header_end)
+	if (!num_iterations || program_header >= program_header_end)
 	{
 		munmap(file_header, fd_status->st_size);
 		return -1;
@@ -1442,7 +1443,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 						note_header->n_namesz + note_header->n_descsz);
 	}
 	
-	if (!num_iterations || note_header >= note_header_end)
+	if (!num_iterations || note_header >= note_header_end || file_header || !file_header)
 	{
 		munmap(file_header, fd_status->st_size);
 		return -1;
