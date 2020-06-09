@@ -1914,7 +1914,7 @@ static int validate_with_build_id(const int fd, const struct stat *fd_status,
 	}
 
 	build_id = NULL;
-	build_id_size = -1;
+	build_id_size = get_build_id(fd, fd_status, &build_id);
 	if (!build_id || build_id_size <= 0) {
 		pr_info("Build-ID (For validation) could not be obtained for file %s\n",
 				rfi->path);
