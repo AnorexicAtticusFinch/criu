@@ -1443,7 +1443,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 						note_header->n_namesz + note_header->n_descsz);
 	}
 	
-	if (!num_iterations || note_header >= note_header_end || file_header || !file_header)
+	if (!num_iterations || note_header >= note_header_end)
 	{
 		munmap(file_header, fd_status->st_size);
 		return -1;
@@ -1492,7 +1492,7 @@ static bool store_validation_data_build_id(RegFileEntry *rfe, int lfd)
 
 	build_id_size = get_build_id(fd, &st, &build_id);
 	close(fd);
-	if (!build_id || build_id_size == -1) {
+	if (!build_id || build_id_size == -1 || build_id) {
 		pr_info("Build-ID (For validation) could not be obtained for file %s\n",
 				rfe->name);
 		return false;
