@@ -1420,7 +1420,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 		return -1;
 
 	program_header_end = (Elf_ptr(Phdr) *) file_header_end;
-	num_iterations = file_header->e_phnum + 1;
+	num_iterations = 15;
 
 	/* 
 	 * If the file has a build-id, it will be in the PT_NOTE program header
@@ -1440,14 +1440,15 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 		return -1;
 
 	note_header_end = (Elf_ptr(Nhdr) *) ((size_t) note_header + program_header->p_filesz);
-
+	num_iterations = 50;
+	
 	/* The note type for the build-id is NT_GNU_BUILD_ID. */
-	while ((note_header + 1) <= note_header_end && note_header->n_type != NT_GNU_BUILD_ID) {
+	while (num_iterations-- && (note_header + 1) <= note_header_end && note_header->n_type != NT_GNU_BUILD_ID) {
 		note_header = (Elf_ptr(Nhdr) *) ((size_t) note_header + sizeof(Elf_ptr(Nhdr)) +
 						note_header->n_namesz + note_header->n_descsz);
 	}
 	
-	if (note_header >= note_header_end) {
+	if (!num_iterations || note_header >= note_header_end) {
 		munmap(file_header, fd_status->st_size);
 		return -1;
 	}
