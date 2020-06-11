@@ -1402,9 +1402,8 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 
 	file_header = (Elf_ptr(Ehdr) *) mmap(0, fd_status->st_size,
 						PROT_READ, MAP_PRIVATE, fd, 0);
-	if (file_header == MAP_FAILED) {
+	if (file_header == MAP_FAILED)
 		return -1;
-	}
 
 	/* 
 	 * If the file doesn't have atleast 1 program header entry, it definitely can't
@@ -1430,9 +1429,9 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 	 * entry AKA the note sections.
 	 */
 	while (num_iterations-- &&  program_header <= program_header_end &&
-			program_header->p_type != PT_NOTE) {
+			program_header->p_type != PT_NOTE)
 		program_header++;
-	}
+
 	if (!num_iterations || program_header >= program_header_end) {
 		munmap(file_header, fd_status->st_size);
 		return -1;
@@ -1463,17 +1462,17 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 		return -1;
 	}
 
-	*build_id = (unsigned char *) xmalloc(note_header->n_descsz);
+	size = note_header->n_descsz;
+
+	*build_id = (unsigned char *) xmalloc(size);
 	if (!*build_id) {
 		munmap(file_header, fd_status->st_size);
 		return -1;
 	}
 
 	memcpy(*build_id,
-		(void *) ((size_t) note_header + sizeof(Elf_ptr(Nhdr)) + note_header->n_namesz),
-		note_header->n_descsz);
+		(void *) ((size_t) note_header + sizeof(Elf_ptr(Nhdr)) + note_header->n_namesz), size);
 
-	size = note_header->n_descsz;
 	munmap(file_header, fd_status->st_size);
 	return size;
 }
