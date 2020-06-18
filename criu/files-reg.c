@@ -1574,6 +1574,8 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 		return -1;
 	start_addr = (char *) mmap(0, fd_status->st_size,
 					PROT_READ, MAP_PRIVATE, fd, 0);
+	if (start_addr == MAP_FAILED)
+		return -1;
 
 	if (start_addr[0] != 0x7f || start_addr[1] != 0x45 ||
 		start_addr[2] != 0x4c || start_addr[3] != 0x46) {
@@ -1640,7 +1642,8 @@ static void store_validation_data(RegFileEntry *rfe,
 	rfe->has_size = true;
 	rfe->size = p->stat.st_size;
 
-	result = store_validation_data_build_id(rfe, lfd);
+	if (opts.file_validation_method == FILE_VALIDATION_BUILD_ID)
+		result = store_validation_data_build_id(rfe, lfd);
 
 	if (!result)
 		pr_info("Only file size could be stored for validation for file %s\n",
@@ -2026,7 +2029,7 @@ static int validate_with_build_id(const int fd, const struct stat *fd_status,
 		return 0;
 	}
 
-	for (i = 0; i < build_id_size; i++) {
+	for (i = 0; i < build_id_size; i++)
 		if (build_id[i] != rfi->rfe->build_id[i]) {
 			pr_err("File %s has bad build-ID value %x at index %d (expect %x)\n",
 					rfi->path, build_id[i],
@@ -2034,7 +2037,6 @@ static int validate_with_build_id(const int fd, const struct stat *fd_status,
 			xfree(build_id);
 			return 0;
 		}
-	}
 
 	xfree(build_id);
 	return 1;
@@ -2057,7 +2059,9 @@ static bool validate_file(const int fd, const struct stat *fd_status,
 		return false;
 	}
 
-	result = validate_with_build_id(fd, fd_status, rfi);
+	if (opts.file_validation_method == FILE_VALIDATION_BUILD_ID)
+		result = validate_with_build_id(fd, fd_status, rfi);
+
 
 	if (result == -1)
 		pr_info("File %s could only be validated with file size\n",
