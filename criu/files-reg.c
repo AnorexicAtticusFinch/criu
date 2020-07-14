@@ -1393,7 +1393,7 @@ static bool should_check_size(int flags)
  * be obtained, else -1.
  */
 static int get_build_id_32(Elf32_Ehdr *file_header, unsigned char **build_id,
-				size_t mapped_size)
+				const int fd, size_t mapped_size)
 {
 	int size, num_iterations;
 	size_t file_header_end;
@@ -1493,7 +1493,7 @@ err:
  * be obtained, else -1.
  */
 static int get_build_id_64(Elf64_Ehdr *file_header, unsigned char **build_id,
-				size_t mapped_size)
+				const int fd, size_t mapped_size)
 {
 	int size, num_iterations;
 	size_t file_header_end;
