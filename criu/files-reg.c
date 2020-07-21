@@ -1442,6 +1442,9 @@ static int get_build_id_32(Elf32_Ehdr *file_header, unsigned char **build_id,
 		return -1;
 
 	note_header_end = (Elf32_Nhdr *)((char *) note_header + program_header->p_filesz);
+	if (note_header_end > (Elf32_Nhdr *) (file_header_end - sizeof(Elf32_Nhdr))) {
+		note_header_end = (Elf32_Nhdr *) (file_header_end - sizeof(Elf32_Nhdr));
+	}
 
 	/* The note type for the build-id is NT_GNU_BUILD_ID. */
 	while (note_header <= note_header_end &&
@@ -1529,6 +1532,9 @@ static int get_build_id_64(Elf64_Ehdr *file_header, unsigned char **build_id,
 		return -1;
 
 	note_header_end = (Elf64_Nhdr *)((char *) note_header + program_header->p_filesz);
+	if (note_header_end > (Elf64_Nhdr *) (file_header_end - sizeof(Elf64_Nhdr))) {
+		note_header_end = (Elf64_Nhdr *) (file_header_end - sizeof(Elf64_Nhdr));
+	}
 
 	/* The note type for the build-id is NT_GNU_BUILD_ID. */
 	while (note_header <= note_header_end &&
