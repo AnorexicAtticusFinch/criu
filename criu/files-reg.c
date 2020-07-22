@@ -1398,6 +1398,9 @@ static int get_build_id_32(Elf32_Ehdr *file_header, unsigned char **build_id,
 		pr_warn("Couldn't find the note program header for file with fd %d\n", fd);
 		return -1;
 	}
+	
+	if (program_header->p_type == PT_NOTE)
+		pr_warn("FOUND PHEADER!\n");
 
 	note_header = (Elf32_Nhdr *) (program_header->p_offset + (char *) file_header);
 	if (note_header <= (Elf32_Nhdr *) file_header)
@@ -1488,6 +1491,9 @@ static int get_build_id_64(Elf64_Ehdr *file_header, unsigned char **build_id,
 		pr_warn("Couldn't find the note program header for file with fd %d\n", fd);
 		return -1;
 	}
+	
+	if (program_header->p_type == PT_NOTE)
+		pr_warn("FOUND PHEADER!\n");
 
 	note_header = (Elf64_Nhdr *) (program_header->p_offset + (char *) file_header);
 	if (note_header <= (Elf64_Nhdr *) file_header)
@@ -1563,7 +1569,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 	 * beginning of the file. Therefore at most only the first 1 MB of the
 	 * file is mapped.
 	 */
-	mapped_size = min_t(size_t, fd_status->st_size, BUILD_ID_MAP_SIZE);
+	mapped_size = fd_status->st_size;
 	start_addr = mmap(0, mapped_size, PROT_READ, MAP_PRIVATE | MAP_FILE, fd, 0);
 	if (start_addr == MAP_FAILED) {
 		pr_warn("Couldn't mmap file with fd %d", fd);
