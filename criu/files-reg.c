@@ -1412,8 +1412,7 @@ static int get_build_id_32(Elf32_Ehdr *file_header, unsigned char **build_id,
 	/* The note type for the build-id is NT_GNU_BUILD_ID. */
 	while (note_header <= note_header_end && note_header->n_type != NT_GNU_BUILD_ID)
 		note_header = (Elf32_Nhdr *) ((char *) note_header + sizeof(Elf32_Nhdr) +
-						ALIGN(note_header->n_namesz, 4) +
-						ALIGN(note_header->n_descsz, 4));
+						note_header->n_namesz + note_header->n_descsz);
 
 	if (note_header >= note_header_end) {
 		pr_warn("Couldn't find the build-id note for file with fd %d\n", fd);
@@ -1503,8 +1502,7 @@ static int get_build_id_64(Elf64_Ehdr *file_header, unsigned char **build_id,
 	/* The note type for the build-id is NT_GNU_BUILD_ID. */
 	while (note_header <= note_header_end && note_header->n_type != NT_GNU_BUILD_ID)
 		note_header = (Elf64_Nhdr *) ((char *) note_header + sizeof(Elf64_Nhdr) +
-						ALIGN(note_header->n_namesz, 4) +
-						ALIGN(note_header->n_descsz, 4));
+						note_header->n_namesz + note_header->n_descsz);
 
 	if (note_header >= note_header_end) {
 		pr_warn("Couldn't find the build-id note for file with fd %d\n", fd);
