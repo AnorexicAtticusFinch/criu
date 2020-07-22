@@ -2217,7 +2217,7 @@ static int validate_with_build_id(const int fd, const struct stat *fd_status,
 		return -1;
 
 	if (round_up(build_id_size, sizeof(uint32_t)) != rfi->rfe->n_build_id * sizeof(uint32_t)) {
-		pr_err("File %s has bad build-ID length %lu (expect %d)\n", rfi->path,
+		pr_err("File %s has bad build-ID length %d (expect %lu)\n", rfi->path,
 				round_up(build_id_size, sizeof(uint32_t)),
 				(int) rfi->rfe->n_build_id * sizeof(uint32_t));
 		xfree(build_id);
