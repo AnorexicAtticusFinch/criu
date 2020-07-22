@@ -28,7 +28,7 @@
  * beginning of the file. Therefore only the first 1MB will be mapped
  * and checked.
  */
-#define BUILD_ID_MAP_SIZE 1048576
+#define BUILD_ID_MAP_SIZE 104857600
 
 /*
  * The file is read and processed in chunks and the required bytes in each
