@@ -1,0 +1,12 @@
+#!/bin/bash
+
+[ "$1" == "--clean" -o "$1" == "--pre-restore" ] || exit 0
+
+filename="${0%.*}.test"
+
+if [ "$1" == "--pre-restore" ]
+then
+	printf '00000' | dd of=$filename bs=1 count=5 conv=notrunc
+else
+	rm $filename
+fi
