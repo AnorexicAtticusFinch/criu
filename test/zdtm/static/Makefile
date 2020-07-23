@@ -302,6 +302,7 @@ TST_FILE	=				\
 		netns-nft				\
 		maps_file_prot			\
 		socket_close_data01		\
+		file-validation-chksm		\
 
 TST_DIR		=				\
 		cwd00				\
