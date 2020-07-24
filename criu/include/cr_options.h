@@ -103,7 +103,7 @@ enum FILE_VALIDATION_OPTIONS
 };
 
 /* This constant dictates which file validation method should be tried by default. */
-#define FILE_VALIDATION_DEFAULT			FILE_VALIDATION_BUILD_ID
+#define FILE_VALIDATION_DEFAULT			FILE_VALIDATION_CHKSM
 
 /*
  * This constant dictates which configuration of bytes (Entire file, First N bytes or
