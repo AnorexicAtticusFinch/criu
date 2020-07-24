@@ -1654,8 +1654,9 @@ static inline bool calculate_checksum_iterator_stop_condition(int iter)
 static bool calculate_checksum(const int fd, const struct stat *fd_status,
 				u32 *checksum)
 {
-	int bit_count, up_bound, low_bound = 0, i = 0;
+	int bit_count;
 	u32 byte, mask;
+	u64 up_bound, low_bound = 0, i = 0;
 	unsigned char *file_header;
 
 	/* At most, the first 10MB of the file is mapped. */
@@ -1671,20 +1672,19 @@ static bool calculate_checksum(const int fd, const struct stat *fd_status,
 	calculate_checksum_iterator_init(&i);
 
 	while (!calculate_checksum_iterator_stop_condition(i) &&
-			(i >= low_bound && i < up_bound)) {
-		byte = file_header[i];
+			i >= low_bound && i < up_bound && i < fd_status->st_size) {
+		byte = file_header[i-low_bound];
 		calculate_checksum_iterator_next(&i);
 
 		/*
-		 * If the new iterator position is outside the mapped region (Bytes in the range 
+		 * If the new iterator position is outside the mapped region (Bytes in the range
 		 * low_bound and up_bound) of the file, the current region needs to be unmapped
 		 * and the next portion (At most the next 10MB) of the file needs to be mapped.
 		 */
-		if (i >= up_bound && up_bound != fd_status->st_size) {
+		if (i >= up_bound && up_bound != fd_status->st_size && i < fd_status->st_size) {
 			munmap(file_header, up_bound - low_bound);
-			i -= up_bound;
-			low_bound = up_bound;
-			up_bound = min_t(size_t, fd_status->st_size, up_bound + CHKSM_CHUNK_SIZE);
+			low_bound = i;
+			up_bound = min_t(size_t, fd_status->st_size, low_bound + CHKSM_CHUNK_SIZE);
 			file_header = (unsigned char *) mmap(0, up_bound - low_bound,
 						PROT_READ, MAP_PRIVATE | MAP_FILE, fd, low_bound);
 		}
@@ -1699,7 +1699,7 @@ static bool calculate_checksum(const int fd, const struct stat *fd_status,
 		while (bit_count--) {
 			mask = -(*checksum & 1);
 
-			/* 
+			/*
 			 * Little endian notation is used.
 			 * The Castagnoli polynomial (0x82F63B78) is used instead of
 			 * 0xEDB88320 and is the difference between CRC32C and CRC32.
