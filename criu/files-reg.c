@@ -1608,7 +1608,7 @@ static int get_build_id(const int fd, const struct stat *fd_status,
 	return -1;
 }
 
-static inline void calculate_checksum_iterator_init(int *iter)
+static inline void calculate_checksum_iterator_init(u64 *iter)
 {
 	if (opts.file_validation_chksm_config == FILE_VALIDATION_CHKSM_EVERY)
 		*iter = 0;
@@ -1618,7 +1618,7 @@ static inline void calculate_checksum_iterator_init(int *iter)
 		*iter = 0;
 }
 
-static inline void calculate_checksum_iterator_next(int *iter)
+static inline void calculate_checksum_iterator_next(u64 *iter)
 {
 	if (opts.file_validation_chksm_config == FILE_VALIDATION_CHKSM_EVERY)
 		*iter += 1;
@@ -1628,7 +1628,7 @@ static inline void calculate_checksum_iterator_next(int *iter)
 		*iter += opts.file_validation_chksm_parameter;
 }
 
-static inline bool calculate_checksum_iterator_stop_condition(int iter)
+static inline bool calculate_checksum_iterator_stop_condition(u64 iter)
 {
 	if (opts.file_validation_chksm_config == FILE_VALIDATION_CHKSM_EVERY) {
 		return false;
