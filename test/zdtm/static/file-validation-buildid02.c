@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 
 	note_header.n_namesz			= sizeof(name);
 	note_header.n_descsz			= sizeof(desc);
-	note_header.n_type			= NT_FILE;
+	note_header.n_type			= NT_PRSTATUS;
 
 	note_header_bid.n_namesz		= sizeof(name);
 	note_header_bid.n_descsz		= sizeof(build_id);
